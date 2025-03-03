@@ -11,5 +11,9 @@
         <key>NSAllowsArbitraryLoads</key>
         <true/>
     </dict>
+    <key>NSCameraUsageDescription</key>
+    <string>This app needs camera access to take photos of your dog for comparison.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>This app needs access to your photo library to select dog photos for comparison.</string>
 </dict>
 </plist>

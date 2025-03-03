@@ -25,10 +25,23 @@ struct ContentView: View {
                             }
                             
                             if viewModel.referenceImages.count < 4 {
-                                AddImageButton {
-                                    viewModel.showReferenceImagePicker = true
+                                Button {
+                                    // This directly triggers the action sheet to show
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        viewModel.showReferenceImageSourceOptions = true
+                                    }
+                                } label: {
+                                    VStack {
+                                        Image(systemName: "plus")
+                                            .font(.system(size: 30))
+                                        Text("Add Image")
+                                            .font(.caption)
+                                    }
+                                    .foregroundColor(.blue)
+                                    .frame(width: 100, height: 100)
+                                    .background(Color.gray.opacity(0.1))
+                                    .cornerRadius(8)
                                 }
-                                .frame(width: 100, height: 100)
                             }
                         }
                         .padding(.horizontal)
@@ -66,8 +79,20 @@ struct ContentView: View {
                                     alignment: .topTrailing
                                 )
                         } else {
-                            AddImageButton {
-                                viewModel.showTestImagePicker = true
+                            Button {
+                                // This directly triggers the action sheet to show
+                                viewModel.showTestImageSourceOptions = true
+                            } label: {
+                                VStack {
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 30))
+                                    Text("Add Image")
+                                        .font(.caption)
+                                }
+                                .foregroundColor(.blue)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(8)
                             }
                             .frame(height: 200)
                         }
@@ -88,7 +113,7 @@ struct ContentView: View {
                         let sortedResults = viewModel.similarityResults.matches.sorted { $0.score > $1.score }
                                 
                         if let topResult = sortedResults.first {
-                            Text(topResult.score > 0.9 ? "It is your Dog!" : "It is not your Dog!")
+                            Text(topResult.score > 0.9 ? "Match!" : "Not match!")
                                 .font(.title2)
                                 .fontWeight(.bold)
                                 .foregroundColor(topResult.score > 0.9 ? .green : .red)
@@ -141,12 +166,44 @@ struct ContentView: View {
                 }
                 .padding(.bottom)
             }
-            .navigationTitle("Find your Dog")
+            .navigationTitle("Face Identification")
             .sheet(isPresented: $viewModel.showReferenceImagePicker) {
-                ImagePicker(selectedImage: $viewModel.selectedReferenceImage)
+                ImagePicker(selectedImage: $viewModel.selectedReferenceImage, sourceType: viewModel.imagePickerSourceType)
             }
             .sheet(isPresented: $viewModel.showTestImagePicker) {
-                ImagePicker(selectedImage: $viewModel.selectedTestImage)
+                ImagePicker(selectedImage: $viewModel.selectedTestImage, sourceType: viewModel.imagePickerSourceType)
+            }
+            .confirmationDialog(
+                "Select Image Source",
+                isPresented: $viewModel.showReferenceImageSourceOptions,
+                titleVisibility: .visible
+            ) {
+                Button("Camera") {
+                    viewModel.imagePickerSourceType = .camera
+                    viewModel.showReferenceImagePicker = true
+                }
+                Button("Photo Library") {
+                    viewModel.imagePickerSourceType = .photoLibrary
+                    viewModel.showReferenceImagePicker = true
+                }
+                Button("Cancel", role: .cancel) {}
+            }
+            .actionSheet(isPresented: $viewModel.showTestImageSourceOptions) {
+                ActionSheet(
+                    title: Text("Select Image Source"),
+                    message: Text("Choose where to get the photo to test"),
+                    buttons: [
+                        .default(Text("Camera")) {
+                            viewModel.imagePickerSourceType = .camera
+                            viewModel.showTestImagePicker = true
+                        },
+                        .default(Text("Photo Library")) {
+                            viewModel.imagePickerSourceType = .photoLibrary
+                            viewModel.showTestImagePicker = true
+                        },
+                        .cancel()
+                    ]
+                )
             }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK") {}
@@ -183,25 +240,30 @@ struct ReferenceImageView: View {
     }
 }
 
-struct AddImageButton: View {
-    let action: () -> Void
-    
+// MARK: - Loading View
+struct LoadingView: View {
     var body: some View {
-        Button(action: action) {
+        ZStack {
+            Color.black.opacity(0.3)
+                .edgesIgnoringSafeArea(.all)
+            
             VStack {
-                Image(systemName: "plus")
-                    .font(.system(size: 30))
-                Text("Add Image")
-                    .font(.caption)
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .padding()
+                
+                Text("Processing...")
+                    .foregroundColor(.white)
+                    .bold()
             }
-            .foregroundColor(.blue)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.gray.opacity(0.1))
-            .cornerRadius(8)
+            .padding(20)
+            .background(Color.gray.opacity(0.8))
+            .cornerRadius(10)
         }
     }
 }
 
+// MARK: - Result Row
 struct ResultRow: View {
     let result: SimilarityResult
 
@@ -230,37 +292,17 @@ struct ResultRow: View {
     }
 }
 
-struct LoadingView: View {
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.3)
-                .edgesIgnoringSafeArea(.all)
-            
-            VStack {
-                ProgressView()
-                    .scaleEffect(1.5)
-                    .padding()
-                
-                Text("Processing...")
-                    .foregroundColor(.white)
-                    .bold()
-            }
-            .padding(20)
-            .background(Color.gray.opacity(0.8))
-            .cornerRadius(10)
-        }
-    }
-}
-
 // MARK: - Image Picker
 struct ImagePicker: UIViewControllerRepresentable {
     @Binding var selectedImage: UIImage?
+    var sourceType: UIImagePickerController.SourceType
+    
     @Environment(\.presentationMode) private var presentationMode
     
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
         picker.delegate = context.coordinator
-        picker.sourceType = .photoLibrary
+        picker.sourceType = sourceType
         return picker
     }
     
@@ -281,6 +323,10 @@ struct ImagePicker: UIViewControllerRepresentable {
             if let image = info[.originalImage] as? UIImage {
                 parent.selectedImage = image
             }
+            parent.presentationMode.wrappedValue.dismiss()
+        }
+        
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             parent.presentationMode.wrappedValue.dismiss()
         }
     }
@@ -308,6 +354,9 @@ class SimilarityViewModel: ObservableObject {
     }
     @Published var showReferenceImagePicker = false
     @Published var showTestImagePicker = false
+    @Published var showReferenceImageSourceOptions = false
+    @Published var showTestImageSourceOptions = false
+    @Published var imagePickerSourceType: UIImagePickerController.SourceType = .photoLibrary
     @Published var isLoading = false
     @Published var showError = false
     @Published var errorMessage = ""
@@ -387,4 +436,3 @@ class SimilarityViewModel: ObservableObject {
         }
     }
 }
-
