@@ -24,7 +24,7 @@ struct ContentView: View {
                                     }
                             }
                             
-                            if viewModel.referenceImages.count < 4 {
+                            if viewModel.referenceImages.count < 10 {
                                 Button {
                                     // This directly triggers the action sheet to show
                                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -113,17 +113,17 @@ struct ContentView: View {
                         let sortedResults = viewModel.similarityResults.matches.sorted { $0.score > $1.score }
                                 
                         if let topResult = sortedResults.first {
-                            Text(topResult.score > 0.9 ? "Match!" : "Not match!")
+                            Text(topResult.score > 0.8 ? "Match!" : "Not match!")
                                 .font(.title2)
                                 .fontWeight(.bold)
-                                .foregroundColor(topResult.score > 0.9 ? .green : .red)
+                                .foregroundColor(topResult.score > 0.8 ? .green : .red)
                                 .padding(.horizontal)
                         }
                         
-//                        ForEach(viewModel.similarityResults.matches, id: \SimilarityResult.id) { result in
-//                            ResultRow(result: result)
-//                                .padding(.horizontal)
-//                        }
+                        ForEach(viewModel.similarityResults.matches, id: \SimilarityResult.id) { result in
+                            ResultRow(result: result)
+                                .padding(.horizontal)
+                        }
                     }
                     .padding(.vertical)
                 }
@@ -338,7 +338,7 @@ class SimilarityViewModel: ObservableObject {
     @Published var testImage: UIImage?
     @Published var selectedReferenceImage: UIImage? {
         didSet {
-            if let image = selectedReferenceImage, referenceImages.count < 4 {
+            if let image = selectedReferenceImage, referenceImages.count < 10 {
                 referenceImages.append(image)
                 selectedReferenceImage = nil
             }

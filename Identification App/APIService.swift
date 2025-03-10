@@ -53,7 +53,7 @@ class APIService {
         // Add user_id to the request (if needed)
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"user_id\"\r\n\r\n".data(using: .utf8)!)
-        body.append("user123\r\n".data(using: .utf8)!) // Replace with actual user ID or app-generated ID
+        body.append("\(SessionManager.shared.sessionUserID)\r\n".data(using: .utf8)!) // Replace with actual user ID or app-generated ID
         
         // Add request_id to the request (optional)
         let requestId = UUID().uuidString
@@ -103,7 +103,7 @@ class APIService {
         // Add user_id to the request (should match what was used in uploadReferenceImages)
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"user_id\"\r\n\r\n".data(using: .utf8)!)
-        body.append("user123\r\n".data(using: .utf8)!) // Replace with actual user ID or app-generated ID
+        body.append("\(SessionManager.shared.sessionUserID)\r\n".data(using: .utf8)!) // Replace with actual user ID or app-generated ID
         
         // Add top_k parameter (default value from your API is 5)
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
